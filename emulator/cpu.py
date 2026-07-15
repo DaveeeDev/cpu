@@ -21,6 +21,13 @@ class CPU:
         for i, byte in enumerate(byte_array):
             self.ram[start_addr + i] = byte
 
+    # Helper: loads a program from a binary file into RAM at a given start address
+    def load_from_file(self, start_addr, filename):
+        with open(filename, "rb") as file:
+            byte_data = file.read()
+            for i, byte in enumerate(byte_data):
+                self.ram[start_addr + i] = byte
+
 
     def alu(self, val_a, val_b, op):
         result = 0
@@ -41,6 +48,8 @@ class CPU:
             result = val_a | val_b
         if op == "XOR":
             result = val_a ^ val_b
+        if op == "NOT":
+            result = ~val_a
         
         result = result & 0xFF  # mask to 8 bits
         z_out = 1 if result == 0 else 0
@@ -60,9 +69,13 @@ class CPU:
         IR_LD = False     # Load Instruction Register
         A_LD = False      # Load Register A
         B_LD = False      # Load Register B
+        X_LD = False      # Load Register X
+        PC_LD = False     # Load Program Counter
         MAR_L_LD = False  # Load Low Byte of MAR
         MAR_H_LD = False  # Load High Byte of MAR
         PC_INC = False    # Increment Program Counter
+        A_INC = False     # Increment Register A
+        A_DEC = False     # Decrement Register A
         RESET_T = False   # Reset Microstep Counter
         ALU_OP = None     # ALU Operation
         
@@ -81,7 +94,6 @@ class CPU:
             # NOP (1-Byte 1-Cycle)
             if opcode == 0x00:
                 RESET_T = True  # Reset Microstep Counter for next instruction
-
             # LDA #imm (2-Byte 2-Cycle)
             elif opcode == 0x01:
                 if T == 1:
@@ -90,7 +102,6 @@ class CPU:
                     A_LD = True     # Register A reads the data byte
                     PC_INC = True   # PC increments to point to the next instruction
                     RESET_T = True  # Reset Microstep Counter for next instruction
-
             # LDA [addr] (3-Byte 4-Cycle)
             elif opcode == 0x02:
                 if T == 1:
@@ -108,7 +119,6 @@ class CPU:
                     RAM_OE = True    # RAM writes the data byte at the address to the data bus
                     A_LD = True      # Register A reads the data byte off the data bus
                     RESET_T = True   # Reset Microstep Counter for next instruction
-
             # STA [addr] (3-Byte, 4-Cycle)
             elif opcode == 0x03:
                 if T == 1:
@@ -129,27 +139,123 @@ class CPU:
                     A_OE = True
                     RAM_WE = True
                     RESET_T = True
-
             # ADD B (1-Byte 2-Cycle)
-            if opcode == 0x04:
+            elif opcode == 0x04:
                 if T == 1:
                     ALU_OP = "ADD"  # ALU adds A and B, stores result in A, updates flags
                     RESET_T = True  # Reset Microstep Counter for next instruction
-
             # ADC B (1-Byte 2-Cycle)
             elif opcode == 0x05:
                 if T == 1:
-                    ALU_OP = "ADC"  # ALU adds A, B and Carry, stores result in A, updates flags
-                    RESET_T = True  # Reset Microstep Counter for next instruction
-
+                    ALU_OP = "ADC"
+                    RESET_T = True
             # SUB B (1-Byte 2-Cycle)
             elif opcode == 0x06:
                 if T == 1:
-                    ALU_OP = "SUB"  # ALU subtracts B from A, stores result in A, updates flags
-                    RESET_T = True  # Reset Microstep Counter for next instruction
-
-            # TODO: Add other opcodes (0x07 - 0x12) here
-
+                    ALU_OP = "SUB"
+                    RESET_T = True
+            # AND B (1-Byte 2-Cycle)
+            elif opcode == 0x07:
+                if T == 1:
+                    ALU_OP = "AND"
+                    RESET_T = True
+            # OR B (1-Byte 2-Cycle)
+            elif opcode == 0x08:
+                if T == 1:
+                    ALU_OP = "OR"
+                    RESET_T = True
+            # XOR B (1-Byte 2-Cycle)
+            elif opcode == 0x09:
+                if T == 1:
+                    ALU_OP = "XOR"
+                    RESET_T = True
+            # NOTA (1-Byte 2-Cycle)
+            elif opcode == 0x0A:
+                if T == 1:
+                    ALU_OP = "NOT"
+                    RESET_T = True
+            # JMP [addr] (3-Byte 3-Cycle)
+            elif opcode == 0x0B:
+                if T == 1:
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_L_LD = True
+                    PC_INC = True
+                elif T == 2:
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_H_LD = True
+                    PC_INC = True
+                elif T == 3:
+                    PC_LD = True
+                    RESET_T = True
+            # JZ [addr] (3-Byte 4-Cycle)
+            elif opcode == 0x0C:
+                if T == 1:
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_L_LD = True
+                    PC_INC = True
+                elif T == 2:
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_H_LD = True
+                    PC_INC = True
+                elif T == 3:
+                    if self.regs["Z"] == 1:
+                        PC_LD = True
+                    RESET_T = True
+            # JC [addr] (3-Byte 4-Cycle)
+            elif opcode == 0x0D:
+                if T == 1:
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_L_LD = True
+                    PC_INC = True
+                elif T == 2:
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_H_LD = True
+                    PC_INC = True
+                elif T == 3:
+                    if self.regs["C"] == 1:
+                        PC_LD = True
+                    RESET_T = True
+            # TAX (1-Byte 2-Cycle)
+            elif opcode == 0x0E:
+                if T == 1:
+                    A_OE = True
+                    X_LD = True
+                    RESET_T = True
+            # TXA (1-Byte 2-Cycle)
+            elif opcode == 0x0F:
+                if T == 1:
+                    X_OE = True
+                    A_LD = True
+                    RESET_T = True
+            # TAB (1-Byte 2-Cycle)
+            elif opcode == 0x10:
+                if T == 1:
+                    A_OE = True
+                    B_LD = True
+                    RESET_T = True
+            # TBA (1-Byte 2-Cycle)
+            elif opcode == 0x11:
+                if T == 1:
+                    B_OE = True
+                    A_LD = True
+                    RESET_T = True
+            # INCA (1-Byte 2-Cycle)
+            elif opcode == 0x12:
+                if T == 1:
+                    A_INC = True
+                    RESET_T = True
+            # DECA (1-Byte 2-Cycle)
+            elif opcode == 0x13:
+                if T == 1:
+                    A_OE = True
+                    A_DEC = True
+                    RESET_T = True
             else:
                 RESET_T = True
 
@@ -177,6 +283,7 @@ class CPU:
         if IR_LD: self.regs["IR"] = self.data_bus
         if A_LD:  self.regs["A"] = self.data_bus
         if B_LD:  self.regs["B"] = self.data_bus
+        if X_LD:  self.regs["X"] = self.data_bus
         
         # Load MAR from data bus
         if MAR_L_LD:
@@ -191,8 +298,14 @@ class CPU:
             self.regs["C"] = c
             self.regs["Z"] = z
 
-        # Update PC register and T counter
-        if PC_INC:
+        # Update registers
+        if A_INC:
+            self.regs["A"] = (self.regs["A"] + 1) & 0xFF
+        elif A_DEC:
+            self.regs["A"] = (self.regs["A"] - 1) & 0xFF
+        if PC_LD:
+            self.regs["PC"] = self.regs["MAR"]
+        elif PC_INC:
             self.regs["PC"] = (self.regs["PC"] + 1) & 0xFFFF
         if RESET_T:
             self.regs["T"] = 0
@@ -201,5 +314,5 @@ class CPU:
 
     def print_state(self):
         print(f"T:{self.regs['T']} | PC:{self.regs['PC']:04X} | IR:{self.regs['IR']:02X} | "
-              f"A:{self.regs['A']:02X} | B:{self.regs['B']:02X} | "
+              f"A:{self.regs['A']:02X} | B:{self.regs['B']:02X} | X:{self.regs['X']:02X} | "
               f"MAR:{self.regs['MAR']:04X} | Z:{self.regs['Z']} C:{self.regs['C']}")

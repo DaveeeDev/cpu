@@ -3,52 +3,55 @@ from cpu import CPU
 cpu = CPU()
 
 test_program = [
-    # Initialise RAM Address 0x2000 with value 5
-    0x01, 0x05,        # LDA #05
-    0x03, 0x00, 0x20,  # STA 0x2000
+    0x01, 0x0A,        # [0x00] LDA #10
+    0x10,              # [0x02] TAB
+    0x01, 0x05,        # [0x03] LDA #05
+    0x04,              # [0x05] ADD B
+    0x0E,              # [0x06] TAX
+    0x13,              # [0x07] DECA
+    0x10,              # [0x08] TAB
+    0x0F,              # [0x09] TXA
+    0x06,              # [0x0A] SUB B
     
-    # Initialise B with value 3
-    0x01, 0x03,        # LDA #03
-    0x0F,              # TAB
+    0x10,              # [0x0B] TAB
+    0x11,              # [0x0C] TBA
+    0x12,              # [0x0D] INCA
+    0x08,              # [0x0E] OR B
+    0x0A,              # [0x0F] NOTA
+    0x10,              # [0x10] TAB
+    0x07,              # [0x11] AND B
+    0x09,              # [0x12] XOR B
+    0x0C, 0x1B, 0x00,  # [0x13] JZ 0x001B
     
-    # Load A with value from previous RAM Address 0x2000
-    0x02, 0x00, 0x20,  # LDA 0x2000
+    # Error Loop 1, zero flag not set
+    0x01, 0xEE,        # [0x16] LDA #0xEE
+    0x0B, 0x16, 0x00,  # [0x18] JMP 0x0016
+
+    0x01, 0xFF,        # [0x1B] LDA #0xFF
+    0x10,              # [0x1D] TAB
+    0x01, 0x02,        # [0x1E] LDA #0x02
+    0x04,              # [0x20] ADD B
+    0x0D, 0x29, 0x00,  # [0x21] JC 0x0029
     
-    # Subtract B from A (A = 5 - 3 = 2)
-    0x06,              # SUB B
+    # Error Loop 2, carry flag not set
+    0x01, 0xEE,        # [0x24] LDA #0xEE
+    0x0B, 0x24, 0x00,  # [0x26] JMP 0x0024
+
+    0x01, 0x42,        # [0x29] LDA #0x42
+    0x03, 0x00, 0x80,  # [0x2B] STA 0x8000
+    0x01, 0x00,        # [0x2E] LDA #0x00
+    0x02, 0x00, 0x80,  # [0x30] LDA 0x8000
     
-    # Increment and test register transfers (A = 2, B = 3, X = 3)
-    0x11,              # INCA
-    0x0D,              # TAX
-    0x12,              # DECA
-    0x0E,              # TXA
-    0x0F,              # TAB
-    
-    # Add B to A (A = 2 + 3 = 5)
-    0x04,              # ADD B
-    
-    # XOR A with B (A = 5 ^ 3 = 6)
-    0x09,              # XOR B
-    
-    # JC should not jump, if it does, it will jump to the crash address 0x0050
-    0x0C, 0x50, 0x00,  # JC 0x0050
-    
-    # JMP to success loop at address 0x0024
-    0x0A, 0x19, 0x00,  # JMP 0x0019
-    
-    # success loop
-    0x0A, 0x19, 0x00,  # JMP 0x0019
-    
-    # crash address (should never be reached)
-    0x00,              # NOP
+    # Success Loop
+    0x0B, 0x33, 0x00   # [0x33] JMP 0x0033
 ]
 
 cpu.load_program(0x0000, test_program)
 
-for i in range(38 + 8):  # 38 microsteps for main program + 8 microsteps for 2 success loop iterations
+for i in range(80):
     print(f"Cycle {i:02d} | ", end="")
     cpu.tick()
     cpu.print_state()
 
 print("\n--- READ VALUE FROM RAM ---")
-print(f"RAM[0x2000]: {cpu.ram[0x2000]:02X} (Expected: 05)")
+print(f"RAM[0x8000]: {cpu.ram[0x8000]:02X} (Expected: 42)")
