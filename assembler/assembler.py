@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 IMMEDIATE_REGEX = re.compile(r'#(\w+)')
-ADDRESS_REGEX = re.compile(r'\[(\w+)\]')
+ADDRESS_REGEX = re.compile(r'^(0x[0-9a-fA-F]+|\d+)$')
 
 def parse_number(val_str):
     if val_str.lower().startswith('0x'):
@@ -64,7 +64,7 @@ def assemble_line(line, line_num):
         "JC":  0x0D
     }
 
-    if mnemonic in opcodes_3byte and args.startswith("[") and args.endswith("]"):
+    if mnemonic in opcodes_3byte:
         match = ADDRESS_REGEX.match(args)
         if match:
             addr = parse_number(match.group(1))

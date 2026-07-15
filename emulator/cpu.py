@@ -91,7 +91,7 @@ class CPU:
             
         # EXECUTE
         elif T > 0:
-            # NOP (1-Byte 1-Cycle)
+            # NOP (1-Byte 2-Cycle)
             if opcode == 0x00:
                 RESET_T = True  # Reset Microstep Counter for next instruction
             # LDA #imm (2-Byte 2-Cycle)
@@ -258,6 +258,7 @@ class CPU:
                     RESET_T = True
             else:
                 RESET_T = True
+            # TODO: add stack push and pop
 
         # Fill address bus
         if PC_OE:
@@ -281,7 +282,9 @@ class CPU:
 
         # Load registers from data bus
         if IR_LD: self.regs["IR"] = self.data_bus
-        if A_LD:  self.regs["A"] = self.data_bus
+        if A_LD:
+            self.regs["A"] = self.data_bus
+            self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
         if B_LD:  self.regs["B"] = self.data_bus
         if X_LD:  self.regs["X"] = self.data_bus
         
@@ -301,8 +304,12 @@ class CPU:
         # Update registers
         if A_INC:
             self.regs["A"] = (self.regs["A"] + 1) & 0xFF
+            self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
+            # TODO: add carry flag update
         elif A_DEC:
             self.regs["A"] = (self.regs["A"] - 1) & 0xFF
+            self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
+            # TODO: add carry flag update
         if PC_LD:
             self.regs["PC"] = self.regs["MAR"]
         elif PC_INC:
@@ -316,3 +323,11 @@ class CPU:
         print(f"T:{self.regs['T']} | PC:{self.regs['PC']:04X} | IR:{self.regs['IR']:02X} | "
               f"A:{self.regs['A']:02X} | B:{self.regs['B']:02X} | X:{self.regs['X']:02X} | "
               f"MAR:{self.regs['MAR']:04X} | Z:{self.regs['Z']} C:{self.regs['C']}")
+
+    def dump_ram(self, start_addr, length):
+        print(f"\n--- RAM DUMP ({hex(start_addr)} - {hex(start_addr + length - 1)}) ---")
+        for i in range(start_addr, start_addr + length, 16):
+            chunk = self.ram[i:i+16]
+            hex_vals = " ".join(f"{b:02X}" for b in chunk)
+            ascii_vals = "".join(chr(b) if 32 <= b <= 126 else "." for b in chunk)
+            print(f"0x{i:04X} | {hex_vals:<47} | {ascii_vals}")
