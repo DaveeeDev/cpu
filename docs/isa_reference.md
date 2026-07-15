@@ -17,20 +17,20 @@ This document outlines the custom 8-bit instruction set for our Von Neumann CPU.
 | **`LDA #imm`** | 2 | `0x01` | `Value` | - | Load 8-bit immediate value into A |
 | **`LDA addr`** | 3 | `0x02` | `ADRL` | `ADRH` | Load 8-bit value from 16-bit memory address into A |
 | **`STA addr`** | 3 | `0x03` | `ADRL` | `ADRH` | Store 8-bit value from A to 16-bit memory address |
-| **`ADD B`** | 1 | `0x04` | - | - | Add B to A ($A = A + B$) |
-| **`ADC B`** | 1 | `0x05` | - | - | Add B to A with Carry ($A = A + B + \text{Carry}$) |
-| **`SUB B`** | 1 | `0x06` | - | - | Subtract B from A ($A = A - B$) |
-| **`AND B`** | 1 | `0x07` | - | - | Bitwise AND between A and B ($A = A \ \& \ B$) |
-| **`OR B`** | 1 | `0x08` | - | - | Bitwise OR between A and B ($A = A \ | \ B$) |
-| **`XOR B`** | 1 | `0x09` | - | - | Bitwise XOR between A and B ($A = A \oplus B$) |
+| **`ADD B`** | 1 | `0x04` | - | - | Add B to A (A = A + B) |
+| **`ADC B`** | 1 | `0x05` | - | - | Add B to A with Carry (A = A + B + Carry) |
+| **`SUB B`** | 1 | `0x06` | - | - | Subtract B from A (A = A - B) |
+| **`AND B`** | 1 | `0x07` | - | - | Bitwise AND between A and B (A = A & B) |
+| **`OR B`** | 1 | `0x08` | - | - | Bitwise OR between A and B (A = A \| B) |
+| **`XOR B`** | 1 | `0x09` | - | - | Bitwise XOR between A and B (A = A ^ B) |
 | **`JMP addr`** | 3 | `0x0A` | `ADRL` | `ADRH` | Unconditional jump to 16-bit address |
-| **`JZ addr`** | 3 | `0x0B` | `ADRL` | `ADRH` | Jump to 16-bit address if Zero flag is set ($Z = 1$) |
-| **`JC addr`** | 3 | `0x0C` | `ADRL` | `ADRH` | Jump to 16-bit address if Carry flag is set ($C = 1$) |
-| **`TAX`** | 1 | `0x0D` | - | - | Transfer A to X ($X = A$) |
-| **`TXA`** | 1 | `0x0E` | - | - | Transfer X to A ($A = X$) |
-| **`TAB`** | 1 | `0x0F` | - | - | Transfer A to B ($B = A$) |
-| **`TBA`** | 1 | `0x10` | - | - | Transfer B to A ($A = B$) |
-| **`INCA`** | 1 | `0x11` | - | - | Increment A by 1 ($A = A + 1$) |
-| **`DECA`** | 1 | `0x12` | - | - | Decrement A by 1 ($A = A - 1$) |
+| **`JZ addr`** | 3 | `0x0B` | `ADRL` | `ADRH` | Jump to 16-bit address if Zero flag is set (Z = 1) |
+| **`JC addr`** | 3 | `0x0C` | `ADRL` | `ADRH` | Jump to 16-bit address if Carry flag is set (C = 1) |
+| **`TAX`** | 1 | `0x0D` | - | - | Transfer A to X (X = A) |
+| **`TXA`** | 1 | `0x0E` | - | - | Transfer X to A (A = X) |
+| **`TAB`** | 1 | `0x0F` | - | - | Transfer A to B (B = A) |
+| **`TBA`** | 1 | `0x10` | - | - | Transfer B to A (A = B) |
+| **`INCA`** | 1 | `0x11` | - | - | Increment A by 1 (A = A + 1) |
+| **`DECA`** | 1 | `0x12` | - | - | Decrement A by 1 (A = A - 1) |
 
 *Note: `ADRL` refers to the lower 8 bits of the 16-bit address, and `ADRH` refers to the upper 8 bits (Little Endian format).*
