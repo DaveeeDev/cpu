@@ -1,2 +1,3 @@
 /emulator/__pycache__/
 assembler/programs/
+compiler/programs/
