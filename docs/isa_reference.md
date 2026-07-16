@@ -11,7 +11,7 @@ This document outlines the custom 8-bit instruction set for our Von Neumann CPU.
 
 ## Instruction Table
 
-| Assembly | Bytes | Cycles | Opcode | Byte 2 | Byte 3 | Description |
+| Mnemonic | Bytes | Cycles | Opcode | Byte 2 | Byte 3 | Description |
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **`NOP`** | 1 | 2 | `0x00` | - | - | No Operation |
 | **`LDA #imm`** | 2 | 2 | `0x01` | `Value` | - | Load 8-bit immediate value into A |

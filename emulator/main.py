@@ -2,11 +2,11 @@ import time
 from cpu import CPU
 
 cycles = 0
-max_cycles = 100000000
+max_cycles = 1000
 
 cpu = CPU()
 
-binary_file_path = "assembler/programs/stress_test.bin"
+binary_file_path = "assembler/programs/loop_mult.bin"
 cpu.load_from_file(0x0200, binary_file_path)
 
 
@@ -19,8 +19,8 @@ def print_benchmark_results(runtime, cycles):
 start_time = time.perf_counter()
 
 while cpu.running and cycles < max_cycles:
-    print(f"Cycle {cycles:02d} | ", end="")
-    cpu.print_state()
+    # print(f"Cycle {cycles:02d} | ", end="")
+    # cpu.print_state()
     cpu.tick()
     cycles += 1
 
