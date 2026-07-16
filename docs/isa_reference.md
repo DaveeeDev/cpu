@@ -33,8 +33,10 @@ This document outlines the custom 8-bit instruction set for our Von Neumann CPU.
 | **`TBA`** | 1 | 2 | `0x11` | - | - | Transfer B to A (A = B) |
 | **`INCA`** | 1 | 2 | `0x12` | - | - | Increment A by 1 (A = A + 1) |
 | **`DECA`** | 1 | 2 | `0x13` | - | - | Decrement A by 1 (A = A - 1) |
-| **`PUSH`** | 1 | 3 | `0x14` | - | - | Push A to Stack beginning @ 0x0100 |
+| **`PUSH`** | 1 | 2 | `0x14` | - | - | Push A to Stack beginning @ 0x0100 |
 | **`POP`** | 1 | 3 | `0x15` | - | - | Pop A from Stack |
+| **`CALL [addr]`** | 3 | 6 | `0x16` | ADRL | ADRH | Push current PC to Stack and Jump to 16-bit address |
+| **`RET`** | 1 | 5 | `0x17` | ADRL | ADRH | Pop previous PC from Stack and Jump to PC |
 | **`HLT`** | 1 | 2 | `0xFF` | - | - | Halt CPU |
 
 *Note: `ADRL` refers to the lower 8 bits of the 16-bit address, and `ADRH` refers to the upper 8 bits (Little Endian format).*

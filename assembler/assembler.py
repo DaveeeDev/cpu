@@ -42,6 +42,7 @@ def assemble_line(line, line_num):
         "DECA":  0x13,
         "PUSH":  0x14,
         "POP":   0x15,
+        "RET":   0x17,
         "HLT":   0xFF
     }
 
@@ -64,7 +65,8 @@ def assemble_line(line, line_num):
         "STA": 0x03,
         "JMP": 0x0B,
         "JZ":  0x0C,
-        "JC":  0x0D
+        "JC":  0x0D,
+        "CALL": 0x16
     }
 
     if mnemonic in opcodes_3byte:

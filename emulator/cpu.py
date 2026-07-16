@@ -63,6 +63,8 @@ class CPU:
     def tick(self):
         # Every virtual control signal is initially set to False or None
         PC_OE = False     # PC Output Enable
+        PC_H_OE = False   # PC High Byte Output Enable
+        PC_L_OE = False   # PC Low Byte Output Enable
         MAR_OE = False    # MAR Output Enable
         SP_OE = False     # SP Output Enable
         A_OE = False      # A Output Enable
@@ -262,23 +264,75 @@ class CPU:
                     A_OE = True
                     A_DEC = True
                     RESET_T = True
-            # PUSH (1-Byte 3-Cycle)
+            # PUSH (1-Byte 2-Cycle)
             elif opcode == 0x14:
                 if T == 1:
-                    SP_OE = True    # Zeige auf die Stack-Adresse im RAM
-                    A_OE = True     # Lege Wert aus A auf den Datenbus
-                    RAM_WE = True   # RAM schreibt das Byte
-                if T == 2:
-                    SP_DEC = True   # Stackpointer verringern
+                    SP_OE = True
+                    A_OE = True
+                    RAM_WE = True
+                    SP_DEC = True
                     RESET_T = True
             # POP (1-Byte 3-Cycle)
             elif opcode == 0x15:
                 if T == 1:
-                    SP_INC = True   # SP increments to point to the next stack location
+                    SP_INC = True
                 if T == 2:
-                    SP_OE = True    # SP sets address bus to the stack location
-                    RAM_OE = True   # RAM writes the value at the stack location to the data bus
-                    A_LD = True     # A reads the value from the data bus
+                    SP_OE = True
+                    RAM_OE = True
+                    A_LD = True
+                    RESET_T = True
+            # CALL [addr] (3-Byte 6-Cycle)
+            elif opcode == 0x16:
+                if T == 1:
+                    # load low byte of target address from code into MAR
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_L_LD = True
+                    PC_INC = True
+                elif T == 2:
+                    # load high byte of target address from code into MAR
+                    PC_OE = True
+                    RAM_OE = True
+                    MAR_H_LD = True
+                    PC_INC = True
+                elif T == 3:
+                    # push PC high byte onto the stack
+                    SP_OE = True
+                    PC_H_OE = True
+                    RAM_WE = True
+                    # decrement SP
+                    SP_DEC = True
+                elif T == 4:
+                    # push pc low byte onto the stack
+                    SP_OE = True
+                    PC_L_OE = True
+                    RAM_WE = True
+                    # decrement SP
+                    SP_DEC = True
+                elif T == 5:
+                    # jump to target address
+                    PC_LD = True
+                    RESET_T = True
+            # RET (1-Byte 5-Cycle)
+            elif opcode == 0x17:
+                if T == 1:
+                    # increment SP
+                    SP_INC = True
+                elif T == 2:
+                    # pop PC low byte from stack into MAR
+                    SP_OE = True
+                    RAM_OE = True
+                    MAR_L_LD = True
+                    # increment SP
+                    SP_INC = True
+                elif T == 3:
+                    # pop PC high byte from stack into MAR
+                    SP_OE = True
+                    RAM_OE = True
+                    MAR_H_LD = True
+                elif T == 4:
+                    # load PC from MAR
+                    PC_LD = True
                     RESET_T = True
             # HLT (1-Byte 2-Cycle)
             elif opcode == 0xFF:
@@ -305,6 +359,10 @@ class CPU:
             self.data_bus = self.regs["X"]
         elif RAM_OE:
             self.data_bus = self.ram[self.addr_bus]
+        elif PC_H_OE:
+            self.data_bus = (self.regs["PC"] >> 8) & 0xFF
+        elif PC_L_OE:
+            self.data_bus = self.regs["PC"] & 0xFF
 
         # Write to RAM
         if RAM_WE:

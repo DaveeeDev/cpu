@@ -1,7 +1,7 @@
 from cpu import CPU
 
 cycles = 0
-max_cycles = 30
+max_cycles = 100
 
 cpu = CPU()
 
