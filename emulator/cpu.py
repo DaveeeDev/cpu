@@ -3,7 +3,7 @@ class CPU:
         self.ram = [0x00] * 65536  # 64 KB RAM
         self.data_bus = 0x00       # 8-Bit
         self.addr_bus = 0x0000     # 16-Bit
-        
+
         self.regs = {
             "A": 0x00,      # Accumulator
             "B": 0x00,      # ALU Secondary Input Register
@@ -15,6 +15,8 @@ class CPU:
             "C": 0,         # Carry-Flag
             "Z": 0          # Zero-Flag
         }
+
+        self.running = True  # CPU running state
 
     # Helper: loads a program into RAM at a given start address
     def load_program(self, start_addr, byte_array):
@@ -255,6 +257,11 @@ class CPU:
                 if T == 1:
                     A_OE = True
                     A_DEC = True
+                    RESET_T = True
+            # HLT (1-Byte 2-Cycle)
+            elif opcode == 0xFF:
+                if T == 1:
+                    self.running = False
                     RESET_T = True
             else:
                 RESET_T = True

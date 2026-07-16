@@ -39,7 +39,8 @@ def assemble_line(line, line_num):
         "TAB":   0x10,
         "TBA":   0x11,
         "INCA":  0x12,
-        "DECA":  0x13
+        "DECA":  0x13,
+        "HLT":   0xFF
     }
 
     # 1-BYTE INSTRUCTIONS
