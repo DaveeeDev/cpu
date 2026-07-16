@@ -4,18 +4,16 @@ class CPU:
         self.data_bus = 0x00       # 8-Bit
         self.addr_bus = 0x0000     # 16-Bit
 
-        self.regs = {
-            "A": 0x00,      # Accumulator
-            "B": 0x00,      # ALU Secondary Input Register
-            "X": 0x00,      # Index and General Purpose Register
-            "IR": 0x00,     # Instruction Register
-            "PC": 0x0200,   # Program Counter
-            "MAR": 0x0000,  # Memory Address Register
-            "SP": 0xFF,     # Stack Pointer
-            "T": 0,         # Microstep-Counter (0 to 4)
-            "C": 0,         # Carry-Flag
-            "Z": 0          # Zero-Flag
-        }
+        self.regA = 0x00      # Accumulator
+        self.regB = 0x00      # ALU Secondary Input Register
+        self.regX = 0x00      # Index and General Purpose Register
+        self.regIR = 0x00     # Instruction Register
+        self.regPC = 0x0200   # Program Counter
+        self.regMAR = 0x0000  # Memory Address Register
+        self.regSP = 0xFF     # Stack Pointer
+        self.regT = 0         # Microstep-Counter (0 to 6)
+        self.flagC = 0        # Carry-Flag
+        self.flagZ = 0        # Zero-Flag
 
         self.running = True  # CPU running state
 
@@ -34,13 +32,13 @@ class CPU:
 
     def alu(self, val_a, val_b, op):
         result = 0
-        c_out = self.regs["C"]
+        c_out = self.flagC
         
         if op == "ADD":
             result = val_a + val_b
             c_out = 1 if result > 255 else 0
         if op == "ADC":
-            result = val_a + val_b + self.regs["C"]
+            result = val_a + val_b + self.flagC
             c_out = 1 if result > 255 else 0
         if op == "SUB":
             result = val_a - val_b
@@ -87,8 +85,8 @@ class CPU:
         RESET_T = False   # Reset Microstep Counter
         ALU_OP = None     # ALU Operation
         
-        T = self.regs["T"]
-        opcode = self.regs["IR"]
+        T = self.regT
+        opcode = self.regIR
         
         # FETCH
         if T == 0:
@@ -210,7 +208,7 @@ class CPU:
                     MAR_H_LD = True
                     PC_INC = True
                 elif T == 3:
-                    if self.regs["Z"] == 1:
+                    if self.flagZ == 1:
                         PC_LD = True
                     RESET_T = True
             # JC [addr] (3-Byte 4-Cycle)
@@ -226,7 +224,7 @@ class CPU:
                     MAR_H_LD = True
                     PC_INC = True
                 elif T == 3:
-                    if self.regs["C"] == 1:
+                    if self.flagC == 1:
                         PC_LD = True
                     RESET_T = True
             # TAX (1-Byte 2-Cycle)
@@ -344,80 +342,80 @@ class CPU:
 
         # Fill address bus
         if PC_OE:
-            self.addr_bus = self.regs["PC"]
+            self.addr_bus = self.regPC
         elif MAR_OE:
-            self.addr_bus = self.regs["MAR"]
+            self.addr_bus = self.regMAR
         elif SP_OE:
-            self.addr_bus = self.regs["SP"] | 0x0100  # Stack starts at 0x0100
+            self.addr_bus = self.regSP | 0x0100  # Stack starts at 0x0100
             
         # Fill data bus
         if A_OE:
-            self.data_bus = self.regs["A"]
+            self.data_bus = self.regA
         elif B_OE:
-            self.data_bus = self.regs["B"]
+            self.data_bus = self.regB
         elif X_OE:
-            self.data_bus = self.regs["X"]
+            self.data_bus = self.regX
         elif RAM_OE:
             self.data_bus = self.ram[self.addr_bus]
         elif PC_H_OE:
-            self.data_bus = (self.regs["PC"] >> 8) & 0xFF
+            self.data_bus = (self.regPC >> 8) & 0xFF
         elif PC_L_OE:
-            self.data_bus = self.regs["PC"] & 0xFF
+            self.data_bus = self.regPC & 0xFF
 
         # Write to RAM
         if RAM_WE:
             self.ram[self.addr_bus] = self.data_bus
 
         # Load registers from data bus
-        if IR_LD: self.regs["IR"] = self.data_bus
+        if IR_LD: self.regIR = self.data_bus
         if A_LD:
-            self.regs["A"] = self.data_bus
-            self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
-        if B_LD:  self.regs["B"] = self.data_bus
-        if X_LD:  self.regs["X"] = self.data_bus
-        
+            self.regA = self.data_bus
+            self.flagZ = 1 if self.regA == 0 else 0
+        if B_LD:  self.regB = self.data_bus
+        if X_LD:  self.regX = self.data_bus
+
         # Load MAR from data bus
         if MAR_L_LD:
-            self.regs["MAR"] = (self.regs["MAR"] & 0xFF00) | self.data_bus
+            self.regMAR = (self.regMAR & 0xFF00) | self.data_bus
         if MAR_H_LD:
-            self.regs["MAR"] = (self.regs["MAR"] & 0x00FF) | (self.data_bus << 8)
+            self.regMAR = (self.regMAR & 0x00FF) | (self.data_bus << 8)
 
         # Perform ALU operation if specified
         if ALU_OP:
-            result, c, z = self.alu(self.regs["A"], self.regs["B"], ALU_OP)
-            self.regs["A"] = result
-            self.regs["C"] = c
-            self.regs["Z"] = z
+            result, c, z = self.alu(self.regA, self.regB, ALU_OP)
+            self.regA = result
+            self.flagC = c
+            self.flagZ = z
 
         # Update registers
         if A_INC:
-            self.regs["A"] = (self.regs["A"] + 1) & 0xFF
-            self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
+            self.regA = (self.regA + 1) & 0xFF
+            self.flagZ = 1 if self.regA == 0 else 0
             # TODO: add carry flag update
         elif A_DEC:
-            self.regs["A"] = (self.regs["A"] - 1) & 0xFF
-            self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
+            self.regA = (self.regA - 1) & 0xFF
+            self.flagZ = 1 if self.regA == 0 else 0
             # TODO: add carry flag update
 
         if PC_LD:
-            self.regs["PC"] = self.regs["MAR"]
+            self.regPC = self.regMAR
         elif PC_INC:
-            self.regs["PC"] = (self.regs["PC"] + 1) & 0xFFFF
+            self.regPC = (self.regPC + 1) & 0xFFFF
 
         if SP_INC:
-            self.regs["SP"] = (self.regs["SP"] + 1) & 0xFF
+            self.regSP = (self.regSP + 1) & 0xFF
         elif SP_DEC:
-            self.regs["SP"] = (self.regs["SP"] - 1) & 0xFF
+            self.regSP = (self.regSP - 1) & 0xFF
 
         if RESET_T:
-            self.regs["T"] = 0
+            self.regT = 0
         else:
-            self.regs["T"] += 1
+            self.regT += 1
 
     def print_state(self):
-        print(f"T:{self.regs['T']} | PC:{self.regs['PC']:04X} | IR:{self.regs['IR']:02X} | "
-              f"A:{self.regs['A']:02X} | B:{self.regs['B']:02X} | X:{self.regs['X']:02X} | "
-              f"MAR:{self.regs['MAR']:04X} | Z:{self.regs['Z']} C:{self.regs['C']}")
+        print(f"T:{self.regT} | PC:{self.regPC:04X} | IR:{self.regIR:02X} | "
+              f"A:{self.regA:02X} | B:{self.regB:02X} | X:{self.regX:02X} | "
+              f"MAR:{self.regMAR:04X} | Z:{self.flagZ} C:{self.flagC}")
 
     def dump_ram(self, start_addr, length, dump="RAM"):
         print(f"\n--- {dump} DUMP ({hex(start_addr)} - {hex(start_addr + length - 1)}) ---")
