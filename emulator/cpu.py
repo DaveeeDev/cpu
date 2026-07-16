@@ -9,8 +9,9 @@ class CPU:
             "B": 0x00,      # ALU Secondary Input Register
             "X": 0x00,      # Index and General Purpose Register
             "IR": 0x00,     # Instruction Register
-            "PC": 0x0000,   # Program Counter
+            "PC": 0x0200,   # Program Counter
             "MAR": 0x0000,  # Memory Address Register
+            "SP": 0xFF,     # Stack Pointer
             "T": 0,         # Microstep-Counter (0 to 4)
             "C": 0,         # Carry-Flag
             "Z": 0          # Zero-Flag
@@ -63,6 +64,7 @@ class CPU:
         # Every virtual control signal is initially set to False or None
         PC_OE = False     # PC Output Enable
         MAR_OE = False    # MAR Output Enable
+        SP_OE = False     # SP Output Enable
         A_OE = False      # A Output Enable
         B_OE = False      # B Output Enable
         X_OE = False      # X Output Enable
@@ -76,8 +78,10 @@ class CPU:
         MAR_L_LD = False  # Load Low Byte of MAR
         MAR_H_LD = False  # Load High Byte of MAR
         PC_INC = False    # Increment Program Counter
+        SP_INC = False    # Increment Stack Pointer
         A_INC = False     # Increment Register A
         A_DEC = False     # Decrement Register A
+        SP_DEC = False    # Decrement Stack Pointer
         RESET_T = False   # Reset Microstep Counter
         ALU_OP = None     # ALU Operation
         
@@ -109,12 +113,12 @@ class CPU:
                 if T == 1:
                     PC_OE = True     # PC sets the address bus to the low byte of the address
                     RAM_OE = True    # RAM writes the low byte of the address to the data bus
-                    MAR_L_LD = True  # MAR reads the low byte off the address bus
+                    MAR_L_LD = True  # MAR reads the low byte off the data bus
                     PC_INC = True    # PC increments to point to the next instruction
                 elif T == 2:
                     PC_OE = True     # PC sets the address bus to the high byte of the address
                     RAM_OE = True    # RAM writes the high byte of the address to the data bus
-                    MAR_H_LD = True  # MAR reads the high byte off the address bus
+                    MAR_H_LD = True  # MAR reads the high byte off the data bus
                     PC_INC = True    # PC increments to point to the next instruction
                 elif T == 3:
                     MAR_OE = True    # MAR sets the address bus to the address
@@ -258,6 +262,24 @@ class CPU:
                     A_OE = True
                     A_DEC = True
                     RESET_T = True
+            # PUSH (1-Byte 3-Cycle)
+            elif opcode == 0x14:
+                if T == 1:
+                    SP_OE = True    # Zeige auf die Stack-Adresse im RAM
+                    A_OE = True     # Lege Wert aus A auf den Datenbus
+                    RAM_WE = True   # RAM schreibt das Byte
+                if T == 2:
+                    SP_DEC = True   # Stackpointer verringern
+                    RESET_T = True
+            # POP (1-Byte 3-Cycle)
+            elif opcode == 0x15:
+                if T == 1:
+                    SP_INC = True   # SP increments to point to the next stack location
+                if T == 2:
+                    SP_OE = True    # SP sets address bus to the stack location
+                    RAM_OE = True   # RAM writes the value at the stack location to the data bus
+                    A_LD = True     # A reads the value from the data bus
+                    RESET_T = True
             # HLT (1-Byte 2-Cycle)
             elif opcode == 0xFF:
                 if T == 1:
@@ -265,13 +287,14 @@ class CPU:
                     RESET_T = True
             else:
                 RESET_T = True
-            # TODO: add stack push and pop
 
         # Fill address bus
         if PC_OE:
             self.addr_bus = self.regs["PC"]
         elif MAR_OE:
             self.addr_bus = self.regs["MAR"]
+        elif SP_OE:
+            self.addr_bus = self.regs["SP"] | 0x0100  # Stack starts at 0x0100
             
         # Fill data bus
         if A_OE:
@@ -317,10 +340,17 @@ class CPU:
             self.regs["A"] = (self.regs["A"] - 1) & 0xFF
             self.regs["Z"] = 1 if self.regs["A"] == 0 else 0
             # TODO: add carry flag update
+
         if PC_LD:
             self.regs["PC"] = self.regs["MAR"]
         elif PC_INC:
             self.regs["PC"] = (self.regs["PC"] + 1) & 0xFFFF
+
+        if SP_INC:
+            self.regs["SP"] = (self.regs["SP"] + 1) & 0xFF
+        elif SP_DEC:
+            self.regs["SP"] = (self.regs["SP"] - 1) & 0xFF
+
         if RESET_T:
             self.regs["T"] = 0
         else:
@@ -331,8 +361,8 @@ class CPU:
               f"A:{self.regs['A']:02X} | B:{self.regs['B']:02X} | X:{self.regs['X']:02X} | "
               f"MAR:{self.regs['MAR']:04X} | Z:{self.regs['Z']} C:{self.regs['C']}")
 
-    def dump_ram(self, start_addr, length):
-        print(f"\n--- RAM DUMP ({hex(start_addr)} - {hex(start_addr + length - 1)}) ---")
+    def dump_ram(self, start_addr, length, dump="RAM"):
+        print(f"\n--- {dump} DUMP ({hex(start_addr)} - {hex(start_addr + length - 1)}) ---")
         for i in range(start_addr, start_addr + length, 16):
             chunk = self.ram[i:i+16]
             hex_vals = " ".join(f"{b:02X}" for b in chunk)

@@ -40,6 +40,8 @@ def assemble_line(line, line_num):
         "TBA":   0x11,
         "INCA":  0x12,
         "DECA":  0x13,
+        "PUSH":  0x14,
+        "POP":   0x15,
         "HLT":   0xFF
     }
 
