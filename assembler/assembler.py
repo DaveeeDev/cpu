@@ -46,6 +46,15 @@ def assemble_line(line, line_num, symbol_table):
     mnemonic = parts[0].upper()
     args = parts[1].strip() if len(parts) > 1 else ""
 
+    # handle DB
+    if mnemonic == "DB":
+        if not args:
+            raise SyntaxError(f"Line {line_num}: DB directive requires a value.")
+        val = parse_number(args)
+        if not (0 <= val <= 255):
+            raise ValueError(f"Line {line_num}: DB value {val} out of 8-Bit Range!")
+        return bytes([val])
+
     # reconstruct full instruction for easier matching
     full_instruction = f"{mnemonic} {args}".strip().upper()
 
@@ -100,9 +109,19 @@ def assemble(input_file, output_file):
             # ignore empty lines
             continue
 
+        # Handle ORG
         if line.upper().startswith("ORG"):
             parts = line.split(maxsplit=1)
             pc = parse_number(parts[1])
+            continue
+
+        # handle EQU
+        tokens = line.split()
+        if len(tokens) >= 3 and tokens[1].upper() == 'EQU':
+            label = tokens[0]
+            if label in symbol_table:
+                raise ValueError(f"Line {line_num}: Duplicate label/constant '{label}' found.")
+            symbol_table[label] = parse_number(tokens[2])
             continue
     
         if ':' in line:
