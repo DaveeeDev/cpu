@@ -33,4 +33,4 @@ print_benchmark_results(runtime_ms, cycles)
 
 
 cpu.dump_ram(0x01F0, 0x10, "STACK")  # dump stack
-cpu.dump_ram(0x8000, 0x10)           # dump values
+cpu.dump_ram(0x8000, 0x20)           # dump values

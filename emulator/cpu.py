@@ -64,10 +64,12 @@ class CPU:
         PC_H_OE = False   # PC High Byte Output Enable
         PC_L_OE = False   # PC Low Byte Output Enable
         MAR_OE = False    # MAR Output Enable
+        MAR_H_OE = False  # MAR High Byte Output Enable
         SP_OE = False     # SP Output Enable
         A_OE = False      # A Output Enable
         B_OE = False      # B Output Enable
-        X_OE = False      # X Output Enable
+        X_OE = False      # X Output Enable on Data Bus
+        X_ADR_OE = False  # X Output Enable on Address Bus
         RAM_OE = False    # RAM Output Enable
         RAM_WE = False    # RAM Write Enable
         IR_LD = False     # Load Instruction Register
@@ -108,7 +110,7 @@ class CPU:
                     A_LD = True     # Register A reads the data byte
                     PC_INC = True   # PC increments to point to the next instruction
                     RESET_T = True  # Reset Microstep Counter for next instruction
-            # LDA [addr] (3-Byte 4-Cycle)
+            # LDA addr (3-Byte 4-Cycle)
             elif opcode == 0x02:
                 if T == 1:
                     PC_OE = True     # PC sets the address bus to the low byte of the address
@@ -125,63 +127,93 @@ class CPU:
                     RAM_OE = True    # RAM writes the data byte at the address to the data bus
                     A_LD = True      # Register A reads the data byte off the data bus
                     RESET_T = True   # Reset Microstep Counter for next instruction
-            # STA [addr] (3-Byte, 4-Cycle)
+            # LDAX page (2-Byte, 3-Cycle)
             elif opcode == 0x03:
                 if T == 1:
-                    # Fetch Low-Byte
+                    # fetch high byte
+                    PC_OE = True
+                    MAR_H_LD = True
+                    RAM_OE = True
+                    PC_INC = True
+                elif T == 2:
+                    # store value from RAM into A
+                    MAR_H_OE = True
+                    X_ADR_OE = True
+                    RAM_OE = True
+                    A_LD = True
+                    RESET_T = True
+            # STA addr (3-Byte, 4-Cycle)
+            elif opcode == 0x04:
+                if T == 1:
+                    # fetch low byte
                     PC_OE = True
                     RAM_OE = True
                     MAR_L_LD = True
                     PC_INC = True
                 elif T == 2:
-                    # Fetch High-Byte
+                    # fetch high byte
                     PC_OE = True
                     RAM_OE = True
                     MAR_H_LD = True
                     PC_INC = True
                 elif T == 3:
-                    # Write A to RAM
+                    # write A to RAM
                     MAR_OE = True
                     A_OE = True
                     RAM_WE = True
                     RESET_T = True
+            # STAX page (2-Byte, 3-Cycle)
+            elif opcode == 0x05:
+                if T == 1:
+                    # fetch high address
+                    PC_OE = True
+                    MAR_H_LD = True
+                    RAM_OE = True
+                    PC_INC = True
+                if T == 2:
+                    # write A to RAM
+                    MAR_H_OE = True
+                    X_ADR_OE = True
+                    A_OE = True
+                    RAM_WE = True
+                    RESET_T = True
             # ADD B (1-Byte 2-Cycle)
-            elif opcode == 0x04:
+            elif opcode == 0x06:
                 if T == 1:
                     ALU_OP = "ADD"  # ALU adds A and B, stores result in A, updates flags
                     RESET_T = True  # Reset Microstep Counter for next instruction
             # ADC B (1-Byte 2-Cycle)
-            elif opcode == 0x05:
+            elif opcode == 0x07:
                 if T == 1:
                     ALU_OP = "ADC"
                     RESET_T = True
             # SUB B (1-Byte 2-Cycle)
-            elif opcode == 0x06:
+            elif opcode == 0x08:
                 if T == 1:
                     ALU_OP = "SUB"
                     RESET_T = True
             # AND B (1-Byte 2-Cycle)
-            elif opcode == 0x07:
+            elif opcode == 0x09:
                 if T == 1:
                     ALU_OP = "AND"
                     RESET_T = True
             # OR B (1-Byte 2-Cycle)
-            elif opcode == 0x08:
+            elif opcode == 0x0A:
                 if T == 1:
                     ALU_OP = "OR"
                     RESET_T = True
             # XOR B (1-Byte 2-Cycle)
-            elif opcode == 0x09:
+            elif opcode == 0x0B:
                 if T == 1:
                     ALU_OP = "XOR"
                     RESET_T = True
             # NOTA (1-Byte 2-Cycle)
-            elif opcode == 0x0A:
+            elif opcode == 0x0C:
                 if T == 1:
                     ALU_OP = "NOT"
                     RESET_T = True
             # JMP [addr] (3-Byte 3-Cycle)
-            elif opcode == 0x0B:
+            elif opcode == 0x0D:
                 if T == 1:
                     PC_OE = True
                     RAM_OE = True
@@ -196,7 +228,7 @@ class CPU:
                     PC_LD = True
                     RESET_T = True
             # JZ [addr] (3-Byte 4-Cycle)
-            elif opcode == 0x0C:
+            elif opcode == 0x0E:
                 if T == 1:
                     PC_OE = True
                     RAM_OE = True
@@ -212,7 +244,7 @@ class CPU:
                         PC_LD = True
                     RESET_T = True
             # JC [addr] (3-Byte 4-Cycle)
-            elif opcode == 0x0D:
+            elif opcode == 0x0F:
                 if T == 1:
                     PC_OE = True
                     RAM_OE = True
@@ -228,42 +260,42 @@ class CPU:
                         PC_LD = True
                     RESET_T = True
             # TAX (1-Byte 2-Cycle)
-            elif opcode == 0x0E:
+            elif opcode == 0x10:
                 if T == 1:
                     A_OE = True
                     X_LD = True
                     RESET_T = True
             # TXA (1-Byte 2-Cycle)
-            elif opcode == 0x0F:
+            elif opcode == 0x11:
                 if T == 1:
                     X_OE = True
                     A_LD = True
                     RESET_T = True
             # TAB (1-Byte 2-Cycle)
-            elif opcode == 0x10:
+            elif opcode == 0x12:
                 if T == 1:
                     A_OE = True
                     B_LD = True
                     RESET_T = True
             # TBA (1-Byte 2-Cycle)
-            elif opcode == 0x11:
+            elif opcode == 0x13:
                 if T == 1:
                     B_OE = True
                     A_LD = True
                     RESET_T = True
             # INCA (1-Byte 2-Cycle)
-            elif opcode == 0x12:
+            elif opcode == 0x14:
                 if T == 1:
                     A_INC = True
                     RESET_T = True
             # DECA (1-Byte 2-Cycle)
-            elif opcode == 0x13:
+            elif opcode == 0x15:
                 if T == 1:
                     A_OE = True
                     A_DEC = True
                     RESET_T = True
             # PUSH (1-Byte 2-Cycle)
-            elif opcode == 0x14:
+            elif opcode == 0x16:
                 if T == 1:
                     SP_OE = True
                     A_OE = True
@@ -271,7 +303,7 @@ class CPU:
                     SP_DEC = True
                     RESET_T = True
             # POP (1-Byte 3-Cycle)
-            elif opcode == 0x15:
+            elif opcode == 0x17:
                 if T == 1:
                     SP_INC = True
                 if T == 2:
@@ -280,7 +312,7 @@ class CPU:
                     A_LD = True
                     RESET_T = True
             # CALL [addr] (3-Byte 6-Cycle)
-            elif opcode == 0x16:
+            elif opcode == 0x18:
                 if T == 1:
                     # load low byte of target address from code into MAR
                     PC_OE = True
@@ -301,7 +333,7 @@ class CPU:
                     # decrement SP
                     SP_DEC = True
                 elif T == 4:
-                    # push pc low byte onto the stack
+                    # push PC low byte onto the stack
                     SP_OE = True
                     PC_L_OE = True
                     RAM_WE = True
@@ -312,7 +344,7 @@ class CPU:
                     PC_LD = True
                     RESET_T = True
             # RET (1-Byte 5-Cycle)
-            elif opcode == 0x17:
+            elif opcode == 0x19:
                 if T == 1:
                     # increment SP
                     SP_INC = True
@@ -340,15 +372,19 @@ class CPU:
             else:
                 RESET_T = True
 
-        # Fill address bus
+        # fill address bus
         if PC_OE:
             self.addr_bus = self.regPC
         elif MAR_OE:
             self.addr_bus = self.regMAR
         elif SP_OE:
             self.addr_bus = self.regSP | 0x0100  # Stack starts at 0x0100
-            
-        # Fill data bus
+        if X_ADR_OE:
+            self.addr_bus = (self.addr_bus & 0xFF00) | self.regX
+        if MAR_H_OE:
+            self.addr_bus = (self.addr_bus & 0x00FF) | (self.regMAR & 0xFF00)
+
+        # fill data bus
         if A_OE:
             self.data_bus = self.regA
         elif B_OE:
@@ -362,11 +398,11 @@ class CPU:
         elif PC_L_OE:
             self.data_bus = self.regPC & 0xFF
 
-        # Write to RAM
+        # write to RAM
         if RAM_WE:
             self.ram[self.addr_bus] = self.data_bus
 
-        # Load registers from data bus
+        # load registers from data bus
         if IR_LD: self.regIR = self.data_bus
         if A_LD:
             self.regA = self.data_bus
@@ -374,20 +410,20 @@ class CPU:
         if B_LD:  self.regB = self.data_bus
         if X_LD:  self.regX = self.data_bus
 
-        # Load MAR from data bus
+        # load MAR from data bus
         if MAR_L_LD:
             self.regMAR = (self.regMAR & 0xFF00) | self.data_bus
         if MAR_H_LD:
             self.regMAR = (self.regMAR & 0x00FF) | (self.data_bus << 8)
 
-        # Perform ALU operation if specified
+        # perform ALU operation if specified
         if ALU_OP:
             result, c, z = self.alu(self.regA, self.regB, ALU_OP)
             self.regA = result
             self.flagC = c
             self.flagZ = z
 
-        # Update registers
+        # update registers
         if A_INC:
             self.regA = (self.regA + 1) & 0xFF
             self.flagZ = 1 if self.regA == 0 else 0

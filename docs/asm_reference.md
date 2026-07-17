@@ -67,30 +67,93 @@ The assembler handles variables and constants using two distinct mechanisms duri
 | Assigned Valeu | Set to the current memory address (PC) | Set to the specified literal value |
 | Pass Resolved	| Address calculated during Pass 1 | Value assigned during Pass 1 |
 
+---
+
+## Expression Operators
+
+These operators allow you to extract specific bytes of a 16-bit address (such as a label or constant) during the assembly process. They are essential when you need to load an address offset into an 8-bit register.
+
+| Operator | Name | Function | Example | Result (if `label = 0x0212`) |
+| :---: | :--- | :--- | :--- | :--- |
+| **`<`** | Low-Byte | Extracts the lower 8 bits (`0x00` - `0xFF`) | `LDA #<label` | `LDA #0x12` |
+| **`>`** | High-Byte | Extracts the upper 8 bits (`0x00` - `0xFF`) | `LDA #>label` | `LDA #0x02` |
+
+---
+
+## Addressing Modes
+
+The CPU distinguishes between loading a literal value and accessing a memory address using two distinct addressing modes:
+
+*   **Immediate Addressing (`#`):** Instructs the CPU to use the literal value following the instruction.
+    *   *Example:* `LDA #0x05` (Loads the numeric value `0x05` directly into the Accumulator).
+*   **Direct/Absolute Addressing (No prefix):** Instructs the CPU to treat the argument as a 16-bit RAM address and load the data stored *at* that address.
+    *   *Example:* `LDA 0x0212` (Loads the byte stored in memory location `0x0212` into the Accumulator).
+*   **Indexed Addressing (page):** Instructs the CPU to use the (page * 256) + X as the 16-bit RAM address and load the data stored *at* that address.
+    *   *Example:* `LDAX 0x02`, `X` = `0x14` (Loads the byte stored in memory location `0x0214` into the Accumulator).
+
+---
+
 ## Assembly Example
 
 Here is a brief, complete program demonstrating how instructions, directives, constants, and labels work together:
 ```assembly
-; Define system constants
-IO_PORT EQU 0x8000
+; ==============================================================================
+; ARRAY PROCESSING & STACK EXAMPLE
+; Iterates through a null-terminated data block, adds a fixed offset to each 
+; value, and pushes the results to the stack.
+; ==============================================================================
 
-ORG 0x0000
+; --- Constants ---
+STACK_P  EQU 0x0100      ; Define stack page (for reference)
+IO_DATA  EQU 0x8000      ; Define memory-mapped I/O address (unused here)
+START    EQU 0x0200      ; Define the program's base memory address
+
+    ORG START            ; Set the assembler PC to 0x0200
 
 start:
-    LDA #0x05       ; Load 5 into A
-    TAB             ; Copy A to B
-    LDA speed       ; Load value from 'speed' address (0x000B) into A
-    ADD B           ; A = A + B
-    STA IO_PORT     ; Write sum to IO_PORT (0x8000)
-    HLT             ; Stop execution
+    ; Initialize our array pointer in the X register.
+    ; We extract only the low-byte of the data_block address.
+    LDA #<data_block     ; Load low-byte of data_block address into A
+    TAX                  ; Transfer A to X (X is now our array index)
 
-; Variable Data Block
-speed: DB 0x03      ; Defined at PC address 0x000B
+loop:
+    ; Read the current array element into A.
+    ; LDAX reads from [Page:X]. We dynamically extract the High-Byte
+    ; of our START address to use as the memory page (0x02).
+    LDAX >START          ; A = RAM[ (START >> 8) : X ]
+    
+    ; Check for null-terminator (0x00)
+    JZ finish            ; If A == 0, Zero Flag is set, jump to finish
+
+    ; Perform the math: ArrayValue + Offset
+    TAB                  ; Move the array value from A into B
+    LDA offset           ; Load the constant offset (0x10) into A
+    ADD B                ; A = A + B (Result is now in A)
+    
+    ; Save the result
+    PUSH                 ; Push the calculated value onto the stack
+
+    ; Increment our pointer (X = X + 1)
+    TXA                  ; Move X back to A so we can use the ALU
+    INCA                 ; Increment A by 1
+    TAX                  ; Move the incremented value back to X
+    
+    JMP loop             ; Jump back to the start of the loop
+
+finish:
+    HLT                  ; Halt the CPU
+
+; --- Data Section ---
+offset:     DB 0x10      ; The offset value to add to each element
+data_block: DB 0x05      ; Array element 1
+            DB 0x0A      ; Array element 2
+            DB 0x00      ; Null-terminator (ends the loop)
 ```
 
 ## Errors & Troubleshooting
 
 The assembler performs validation checks and will halt assembly if it encounters any of the following:
+*   **Syntax & Formatting Violations:** Enforces valid mnemonics and correct argument counts (e.g., catching typos like `LAD #0x05` or missing arguments).
 *   **Out of Range Immediate Value (8-bit):** High-byte arguments for `LDA #imm` and values for `DB` must sit between `0` and `255` (`0x00` - `0xFF`).
 *   **Out of Range Address (16-bit):** Target addresses for jump/call instructions or `EQU` values used as addresses must sit between `0` and `65535` (`0x0000` - `0xFFFF`).
 *   **Duplicate Symbols:** Declaring the same label or `EQU` constant twice will result in a duplication error.
