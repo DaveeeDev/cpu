@@ -2,11 +2,11 @@ import time
 from cpu import CPU
 
 cycles = 0
-max_cycles = 1000
+max_cycles = 100000
 
 cpu = CPU()
 
-binary_file_path = "assembler/programs/test.bin"
+binary_file_path = "assembler/programs/big_test.bin"
 cpu.load_from_file(0x0200, binary_file_path)
 
 
@@ -32,5 +32,7 @@ runtime_ms = (end_time - start_time) * 1000
 print_benchmark_results(runtime_ms, cycles)
 
 
-cpu.dump_ram(0x01F0, 0x10, "STACK")  # dump stack
-cpu.dump_ram(0x8000, 0x20)           # dump values
+cpu.dump_ram(0x0000, 0x10, "PROGRAM")     # dump zero page
+cpu.dump_ram(0x00F0, 0x10, "SCRATCHPAD")  # dump scratchpad
+cpu.dump_ram(0x01F0, 0x10, "STACK")       # dump stack
+cpu.dump_ram(0x8000, 0x10, "I/O")         # dump I/O values
