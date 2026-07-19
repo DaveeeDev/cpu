@@ -1,0 +1,51 @@
+{
+	"name": "cflat-asm-language-support",
+	"displayName": "CFlat and ASM Language Support",
+	"description": "Syntax highlighting for CFlat and Custom Assembly",
+	"version": "0.0.2",
+	"engines": {
+		"vscode": "^1.80.0"
+	},
+	"categories": [
+		"Programming Languages"
+	],
+	"contributes": {
+		"languages": [
+			{
+				"id": "cflat",
+				"aliases": [
+					"CFlat",
+					"cflat"
+				],
+				"extensions": [
+					".cflat"
+				],
+				"configuration": "./language-configuration.json"
+			},
+			{
+				"id": "assembly",
+				"aliases": [
+					"Assembly",
+					"ASM",
+					"asm"
+				],
+				"extensions": [
+					".asm"
+				],
+				"configuration": "./asm-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "cflat",
+				"scopeName": "source.cflat",
+				"path": "./syntaxes/cflat.tmLanguage.json"
+			},
+			{
+				"language": "assembly",
+				"scopeName": "source.asm",
+				"path": "./syntaxes/asm.tmLanguage.json"
+			}
+		]
+	}
+}
